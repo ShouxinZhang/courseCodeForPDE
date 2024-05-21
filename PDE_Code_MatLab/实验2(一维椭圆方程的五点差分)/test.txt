@@ -1,0 +1,78 @@
+我正在用紧致差分格式的Gauss-Seidel迭代法求解如下偏微分方程:
+$\Delta u(x,y)=6(x,y).$
+该方程有唯一的精确解$u=x^3+y^3$.
+以下是matlab代码,它运行的误差比我想象中要大很多,我希望知道这是为什么.
+clear
+%f是非齐次项
+f=@(x,y)(-6*(x+y));
+%边界条件函数
+varphi_1=@(x)(x.^3);
+varphi_2=@(x)(1+x.^3);
+psi_1=@(y)(y.^3);
+psi_2=@(y)(1+y.^3);
+%u_ES是精确解函数
+u_ES=@(x,y)(x.^3+y.^3);
+%迭代步数定义
+J1=50;
+J2=50;
+%计算区间端点定义
+a1=0;
+b1=1;
+a2=0;
+b2=1;
+L1=(b1-a1);
+L2=(b2-a2);
+%均匀步长h1,h2定义
+h1=(L1/J1);
+h2=(L2/J2);
+%u是数值解储存矩阵,u_ESM是精确解储存矩阵
+u=zeros(J1+1,J2+1);
+u_ESM=zeros(J1+1,J2+1);
+j_1=@(x)(x+1);
+j_2=@(x)(x+1);
+for j1_c=0:J1
+    j1=j1_c+1;
+    u(j1,j_2(0))=varphi_1(j1_c*h1);
+    u(j1,j_2(J2))=varphi_2(j1_c*h1);
+end
+for j2_c=0:J2
+    j2=j2_c+1;
+    u(j_1(0),j2)=psi_1(j2_c*h2);
+    u(j_1(J1),j2)=psi_2(j2_c*h2);
+end
+f_M=zeros(J1+1,J2+1);
+for j1_c = 0:J1
+    j1=j1_c+1;
+    for j2_c = 0:J2
+        j2=j2_c+1;
+        f_M(j1,j2)=f(j1_c*h1,j2_c*h2);
+    end
+end
+beta=h1^(-2);
+gamma=h2^(-2);
+xi=beta+gamma;
+eta1=10*beta-2*gamma;
+eta2=10*gamma-2*beta;
+% Iterate over the grid points and compute the numerical solution
+for k = 1:10000
+    for j1_c = 1:J1-1
+        j1=j1_c+1;
+        for j2_c = 1:J2-1
+            j2=j2_c+1;
+            u(j1,j2)=((-20*xi)^(-1))*(-12*Relax(f,j1,j2)...
+            -xi*(u(j1-1,j2-1)+u(j1+1,j2-1)+u(j1-1,j2+1)+u(j1+1,j2+1))...
+            -eta1*(u(j1-1,j2)+u(j1+1,j2))...
+            -eta2*(u(j1,j2-1)+u(j1,j2+1)));
+        end
+    end
+end
+
+% Compute the exact solution on the grid
+for j1 = 1:J1+1
+    for j2 = 1:J2+1
+        u_ESM(j1,j2) = u_ES((j1-1)*h1,(j2-1)*h2);
+    end
+end
+
+% Compare the numerical and exact solutions
+disp(max(max(abs(u - u_ESM))));
